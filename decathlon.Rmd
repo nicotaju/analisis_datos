@@ -1,0 +1,86 @@
+---
+title: "decathlon"
+author: "Nicolás Tajuelo 21316"
+date: "8/10/2024"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Análisis PCA del dataset SEOUL1988
+
+```{r}
+dat = read.table('SEOUL1988.txt',header = T)
+row.names(dat) = dat$Athlete
+dat = dat[,3:12]
+```
+
+```{r}
+fit1 = princomp(dat,cor = T)
+```
+
+## 1. ¿Qué porcentaje de la varianza total está explicada por las dos componentes principales?
+
+Varianza explicada por cada CP (tienen que sumar 10)
+
+```{r}
+fit1$sdev^2
+```
+
+En porcentajes:
+
+```{r}
+fit1$sdev^2/10*100
+```
+
+Entre las dos primeras CP se explica el 71% de la varianza
+
+## ¿Qué variable original está mejor/peor explicada con la solución de 2CP?
+
+```{r}
+source("prinfact.R")
+fit2 = prinfact(dat,2)
+```
+
+```{r}
+fit2$loadings
+fit2$variances
+```
+
+Vemos que con 2 CP la variable mejor explicada (es la que mayor communality tiene) es la variable `SHOT_P`. La que peor está explicada es `HIGH_J`.
+
+## Gráfico biplot
+
+```{r}
+biplot(fit1)
+```
+
+Vemos que las variables de tiempo de carrera (`T100`, `T400`, etc.), están situadas de forma opuesta a las variable de salto y lanzamiento. Esto es porque los tiempos más pequeños están relacionados con un mayor rendimiento, mientras que en el caso de saltos y lanzamientos, el mayor rendimiento está asociado a valores altos.
+
+
+## Corregir las variables para convertir el tiempo en velocidad.
+
+```{r}
+dat2 = read.table('SEOUL1988.txt',header = T)
+row.names(dat2) = dat2$Athlete
+dat2 = dat2[,3:12]
+dat2$T100=100/dat2$T100
+dat2$T110=110/dat2$T110
+dat2$T400=400/dat2$T400
+dat2$T1500=1500/dat2$T1500
+fit3 = princomp(dat2)
+source("prinfact.R")
+fit4 = prinfact(dat2,2)
+fit4$variances
+fit4$loadings
+biplot(fit3)
+```
+
+
+
+
+la interpretación de las dos componentes principales es la siguiente. La CP1 mide la especialización: observamos que hay atletas especialistas en carrera y otros especialistas en salto, según estén a la derecha o izquierda del gráfico. Por otro lado, la CP2 mide el rendimiento general: un atleta completo que obtenga buenos resultados en todas las pruebas, como Mike Olander, está situado en la parte alta del gráfico.
+
+

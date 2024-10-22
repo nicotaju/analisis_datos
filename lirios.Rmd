@@ -1,0 +1,141 @@
+---
+title: "lirios"
+author: "Nicolás Tajuelo 21316"
+date: "16/10/2024"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Lirios
+
+Vamo a ver
+
+```{r}
+library(MASS)
+library(multiUS)
+dat = read.table('lirios.txt',header = T)
+dat$Species = factor(dat$Species)
+m1 = lda(Species ~ .,data= dat)
+names(m1)
+```
+
+```{r}
+m1
+```
+
+Prediciendo
+
+```{r}
+p1 = predict(m1)
+```
+
+```{r}
+View(cbind(dat,p1$x,p1$class))
+```
+
+## Gráficos
+
+```{r}
+plot(m1,col=as.integer(dat$Species),abbrev = T)
+```
+
+Vemos que la función discriminante más importante es la primera.
+
+```{r}
+plot(m1,dimen = 1)
+```
+
+Fabricando nosotros el gráfico
+
+```{r}
+plot(p1$x[,1],p1$x[,2],col=as.integer(dat$Species),xlim=c(-10,10),ylim=c(-5,5),cex=.5)
+```
+
+## Ahora usamos la librería `multiUS`.
+
+```{r}
+m2 = ldaPlus(x = dat[,1:4],grouping = dat$Species)
+names(m2)
+```
+
+Las importancias de las funciones discriminantes (valores propios de StB): vemos que la primera es mucho más importante.
+
+```{r}
+m2$eigModel
+```
+
+### Pesos de las funciones discriminantes:
+
+Ojo, no están estandarizados, por lo que no podemos interpretar la importancia de cada variable original.
+
+```{r}
+m2$scaling
+```
+
+### Diferencia entre `sapply` y `tapply`
+\begin{itemize}
+  \item `sapply` coge una matriz y aplica una función por columnas (media de cada columna)
+
+  \item `tapply` coge una variable clasificada por grupos y aplica una misma función a las variables da cada grupo por separado
+\end{itemize}
+
+### Medias de las variables y de las funciones discriminantes
+
+```{r}
+(media = sapply(dat[,1:4],mean))
+```
+
+```{r}
+sum(m2$scaling[,1]*media)
+sum(m2$scaling[,2]*media)
+```
+
+### Coeficientes estandarizados
+
+Para poder interpretar los pesos, debemos estandarizarlos.
+
+```{r}
+m2$standCoefWithin
+```
+
+Vemos que la variable original más importante es `Petal.length`.
+
+### Clasificación
+
+Matriz de confusión:
+
+```{r}
+table(dat$Species,p1$class)
+```
+
+O lo que es lo mismo: 
+
+```{r}
+m2$class
+```
+
+Vamos a predecir una nueva observación
+
+```{r}
+nueva = data.frame(Sepal.Length = 5,
+                   Sepal.Width = 3,
+                   Petal.Length = 2,
+                   Petal.Width = 2)
+predict(m1,newdata = nueva)
+```
+
+# Validación
+
+```{r}
+set.seed(135)
+sel = sample(1:150,40)
+mod = dat[-sel,]
+test = dat[sel,]
+m3 = lda(Species ~ ., data = mod)
+pr = predict(m3,newdata=test)
+table(test$Species,pr$class)
+```
+

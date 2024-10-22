@@ -1,0 +1,74 @@
+---
+title: "wisconsin breast tumor"
+author: "Nicolás Tajuelo 21316"
+date: "9/19/2024"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Wisconsin Breast Cancer Dataset
+
+## Cargamos los datos
+
+```{r}
+dat = read.table("wdbc.txt",header=T)
+row.names(dat) = dat$id
+dat = dat [-1]
+dat$diagnosis = factor(dat$diagnosis)
+dat = dat[order(dat$diagnosis),]
+```
+
+## Obtén la función discriminante
+
+```{r}
+library(MASS)
+m1 = lda(diagnosis ~ ., data = dat)
+m1
+```
+
+Que los coeficientes sean altos o bajos, no implica que la variable sea más importante. En este caso, el peso de `concave_points` es alto porque las unidades de esa variable son muy bajas.
+
+```{r}
+plot(m1)
+```
+
+Matriz de confusión:
+
+```{r}
+pred = predict(m1)
+table(dat$diagnosis,pred$class)
+```
+
+¿Cuáles son los centroides?
+
+```{r}
+tapply(pred$x,dat$diagnosis,mean)
+```
+
+¿Cuál sería $a_0$?
+
+
+
+Ahora hacemos `ldaPlus`.
+
+```{r}
+library(multiUS)
+m2 = ldaPlus(dat[2:11],dat$diagnosis)
+names(m2)
+```
+
+Pesos estandarizados (sí que son interpretables):
+
+```{r}
+m2$standCoefWithin
+```
+
+Para ver si hay diferencia entre los dos grupos, podemos hacer el contraste: el p-valor sale muy pequeño.
+
+```{r}
+m2$sigTest
+```
+

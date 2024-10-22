@@ -1,0 +1,156 @@
+---
+title: "pca"
+author: "Nicolás Tajuelo 21316"
+date: "2/10/2024"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Cargamos los datos
+
+```{r}
+dat = read.csv('gastos.csv',header=TRUE)
+dat[15,1]='CORUNHA'
+row.names(dat) = dat$PROVINC
+dat = dat[,3:8]
+```
+
+Para que tenga sentido aplicar PCA, las variables deben estar linealmente correlacionadas.
+
+```{r}
+cor(dat)
+pairs(dat)
+```
+
+## Hacemos el PCA.
+
+Usamos la función ``princomp()`` indicando ``cor=T`` para que use las variables estandarizadas según su desviación típica.
+
+```{r}
+fit1 = princomp(dat,cor=T)
+names(fit1)
+```
+
+La variable sdev es la raíz de los lambdas. Se han generado 6 componentes principales, vemos que la suma de los 6 lamdas debe ser 6.
+
+```{r}
+fit1$sdev^2
+```
+
+Veamos en porcentaje cuánta información se explica en cada componente principal.
+
+```{r}
+fit1$sdev^2/6*100
+```
+
+Hagamos la suma acumulada para ver cuánta información mantendremos si nos quedamos con 1, 2 o 3 componentes.
+
+```{r}
+cumsum(fit1$sdev^2)/6*100
+```
+
+Obtengamos ahora el valor ($y_{ji}$ en los apuntes) de dichos componentes.
+
+```{r}
+#fit1$scores
+#nos quedamos con los 2 primeros
+dat$CP1 = fit1$scores[,1]
+dat$CP2 = fit1$scores[,2]
+View(dat)
+```
+
+También podemos acceder a los pesos ($a_{ji}$ en los apuntes)
+
+```{r}
+unclass(fit1$loadings)
+```
+
+Podemos interpretar el significado de las dos primeras CP mediante el gráfico `biplot()`. También es interesante ver qué parte de la varianza está explicada por cada componente.
+
+```{r}
+biplot(fit1)
+fit1$center #media
+plot(fit1,type='l')
+```
+
+## Otro tipo de ajuste de PCA
+
+Usamos el modelo `prinfact.R` (descargado de Moodle).
+
+```{r}
+source("prinfact.R")
+fit2 = prinfact(dat)
+names(fit2)
+```
+
+La variable `scores` almacena el valor de las $y_i$.
+
+```{r}
+fit2$scores
+```
+
+La variable `loadings` almacena los pesos $a_{ij}$.
+
+```{r}
+fit2$loadings
+```
+
+## Aplicación a USA CRIME
+
+Vamos a analizar otro conjunto de datos: USA CRIME.
+
+```{r}
+dat2 = read.table('USAcrime.txt',header=T)
+row.names(dat2) = dat2$STATE
+dat2 = dat2[,2:8]
+pairs(dat2)
+```
+
+Observamos que hay correlación lineal entre las variables, por lo que hacemos el pca.
+
+```{r}
+fit3 = princomp(dat2,cor=T)
+```
+
+¿Qué porcentaje de la varianza explica cada componente principal?
+
+```{r}
+plot(fit3)
+fit3$sdev^2/6*100
+```
+
+Nos quedamos con los dos primeros CPs, pues queremos explicar al menos un 80%.
+
+¿Qué delito está mejor/peor explicado con 2 CPs?
+
+```{r}
+fit4 = prinfact(dat2)
+fit4$loadings
+```
+
+Observamos que el delito `MURDER` tiene una mayor `communality`, por tanto está mejor explicado por las 2 primeras componentes principales. Quiere decir que el 86% de la varianza del delito está explicada. Por otro lado, el delito `ROBBERY` es el que peor explica est reducción dimensional.
+
+```{r}
+biplot(fit3)
+```
+
+Podemos deducir que el CP1 mide el nivel general de crimen de cada estado, mientras que el CP2 parece que mide la violencia de los crímenes, adoptando sus pesos valores negativos en robos de coches y de carteras y positivos en asesinatos, asaltos, violaciones, etc.
+
+Por tanto, como New York está situado a la derecha del gráfico, con un valor positivo en CP1 y uno cercano a 0 en CP2, concluimos que es un estado con alto nivel general de crimen, pero no preponderan ni los crímenes violentos ni los crímene de propiedad.
+
+En el caso de Missisipi, vemos que no tiene un alto nivel general de crimen, pero sí tiene un mayor grado de crímenes violentos.
+
+```{r}
+library(corrplot)
+corrplot(cor(dat2),method = 'ellipse')
+```
+
+```{r}
+library(car)
+scatterplotMatrix(dat2)
+```
+
+

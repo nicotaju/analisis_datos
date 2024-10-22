@@ -1,0 +1,216 @@
+---
+title: "Tarea 1 Análisis de datos"
+author: ""
+date: "27/9/2024"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Apartado 1
+
+Diagrama de caja y bigotes de la variable "tiempo de descarga".
+
+```{r}
+dat = read.table("autobus.txt",header=TRUE)
+boxplot(dat$tiempo,col="forestgreen",horizontal=TRUE,main='Tiempo de descarga')
+summary(dat$tiempo)
+```
+
+En el diagrama de caja y bigotes observamos que no hay atípicos. La mediana de las mediciones es 249.6 segundos. El primer cuartil es 202.2 segundos y el tercer cuartil es 259.0 segundos. Podemos ver que el tercer cuartil está cerca de la mediana, por lo que sabemos que hay muchas mediciones en las que el tiempo de descarga está entre ambos valores.
+
+
+## Apartado 2
+
+Gráfico de dispersión del tiempo de descarga en función de la longitud del vídeo.
+
+```{r}
+scatter.smooth(dat$longitud,dat$tiempo,
+               col='skyblue',
+               xlab="Longitud del vídeo (min)",
+               ylab="Tiempo de descarga (s)")
+
+```
+
+Vemos que hay dos regiones diferenciadas en el diagrama. Por un lado, en las observaciones en las que el tiempo de descarga es menor a 220 segundos, no se observa correlación entre las dos variables. Por tanto, un modelo de regresión no puede ajustarse bien en esta zona. Por otro lado, a partir de 220 segundos en tiempo de descarga, vemos que la relación es considerablemente lineal, y podemos trazar una recta de regresión que se ajuste a los datos.
+
+```{r}
+scatter.smooth(dat$longitud[dat$tiempo>220],
+              dat$tiempo[dat$tiempo>220],
+              col='skyblue',
+              xlab="Longitud del vídeo (min)",
+              ylab="Tiempo de descarga (s)")
+```
+
+Utilizaremos un modelo de regresión que sigue una ecuación lineal de la forma: $$ y_i = \beta_0 + \beta_1 x_i + e_i$$ donde $x$ es la longitud del vídeo en minutos, $y$ es el tiempo de descarga y $e_i$ es el error de incertidumbre, que sigue una distribución normal con media cero.
+
+En primer lugar, estimaremos el modelo usando todos los datos, y a continuación realizaremos la estimación desechando los datos en la región de tiempo de descarga menor a 220 segundos.
+
+```{r}
+m = lm(tiempo ~ longitud,data=dat)
+summary(m)
+```
+
+Estimaremos $\hat{y}$ con los parámetros que hemos obtenido: $\hat\beta_0 = 212.159$ y $\hat\beta_1 = 2.401$. Pero si observamos el p-valor obtenido para $\hat\beta_1$, que es de 0.492, podemos decir que esta variable que no es significativa, es decir, que no influye significativamente en el valor del tiempo de descarga.
+
+Ahora estimemos los parámetros desechando los datos mencionados.
+
+```{r}
+m = lm(tiempo[dat$tiempo>220] ~ longitud[dat$tiempo>220],
+       data=dat)
+summary(m)
+```
+
+Vemos que ahora la variable longitud del vídeo sí que es significativa para la regresión. Esto se debe a que, al haber eliminado las observaciones inconvenientes, ahora hay menos error asociado al parámetro $\hat{\beta_1}$. También hay que decir que los valores de $\hat{\beta_0}$ y $\hat\beta_1$ han cambiado ligeramente.
+
+Además, podemos observar que la desviación típica residual decrece muchísimo en este caso, pues se han desechado los datos que estaban en la región no lineal. Su valor es 9.794, lo utilizaremos más adelante. También ha aumentado mucho el indicador $R^2$, es decir, el modelo ha mejorado, pero todavía obtenemos un valor bajo, $R^2 = 0.4672$ (va de 0 a 1).
+
+Nos quedamos entonces con la ecuación:$$\hat{y_i} = 210.7576 + 5.8185 x_i + e_i$$
+
+
+## Apartado 3
+
+Calculemos un intervalo de confianza para los parámetros del modelo ($\alpha = 0.05$). Sabemos que los estimadores siguen las siguientes distribuciones normales:
+$$\hat\beta_0 \rightarrow N(\beta_0,\frac{\sigma^2}{\sqrt{n}}(1+\frac{\hat{x}^2}{s{_x^2}}))$$
+$$\hat\beta_1 \rightarrow N(\beta_1,\frac{\sigma^2}{n s{_x^2}})$$
+Como no disponemos de la varianza, corregiremos con la varianza residual. Por tanto, podemos calcular un intervalo de confianza para estos parámetros usando las siguientes expresiones:
+$$\frac{\hat\beta_0-\beta_0}{\frac{\hat{s}_R}{\sqrt{n}}\sqrt{1+\frac{\bar{x}^2}{s{_x^2}}}} \rightarrow t_{n-2}$$
+$$\frac{\hat\beta_1-\beta_1}{\frac{\hat{s}_R}{\sqrt{n}s_x}} \rightarrow t_{n-2}$$
+donde $n$ el número de observaciones, que en este caso son 44 (en lugar de 60), al haber desechado parte de ellas. Introducimos los comandos correspondientes en R.
+
+```{r}
+sr = 9.974
+n = 44
+mean_x = mean(dat$longitud)
+var_x = var(dat$longitud)
+#límite superior
+ls_beta0 = m$coefficients[1] + sr/sqrt(n) * sqrt(1+mean_x^2/var_x) * qt(0.975,n-2)
+#límite inferior
+li_beta0 = m$coefficients[1] + sr/sqrt(n) * sqrt(1+mean_x^2/var_x) * qt(0.025,n-2)
+interv = c(li_beta0, ls_beta0)
+interv
+```
+
+El intervalo de confianza para $\hat\beta_0$ es (205.7238, 215.7914).
+
+```{r}
+sr = 9.974
+n = 44
+var_x = var(dat$longitud)
+#límite superior
+ls_beta1 = m$coefficients[2] + sr/sqrt(n*var_x) * qt(0.975,n-2)
+#límite inferior
+li_beta1 = m$coefficients[2] + sr/sqrt(n*var_x) * qt(0.025,n-2)
+interv = c(li_beta1, ls_beta1)
+interv
+```
+
+El intervalo de confianza para $\hat\beta_1$ es (4.210, 7.427).
+
+Otra manera de calcular esto es usar un simple comando de R:
+
+```{r}
+confint(m, level=0.95)
+```
+
+Los resultados son prácticamente idénticos, lo que corrobora los cálculos.
+
+## Apartado 4
+
+Añadamos al modelo la influencia de la resolución del vídeo, el navegador y el alumno. En este caso, utilizaremos todas las observaciones, pues este análisis nos puede ofrecer alguna explicación para la existencia de la zona no lineal.
+
+```{r}
+dat$navegador = factor(dat$navegador)
+dat$alumno = factor(dat$alumno)
+m2 = lm(tiempo ~ longitud + resolucion + navegador + alumno, data = dat)
+summary(m2)
+```
+
+El modelo multivariable ajusta mucho mejor los datos, lo que significa que solamente usar la longitud del vídeo no era buena idea. De hecho, $R^2$ ha aumentado hasta 0.9511. 
+
+Los resultados arrojan varias posibles conclusiones. En primer lugar, vemos que tanto la longitud como la resolución de los vídeos son factores significativos, es decir, influyen significativamente en la variación del tiempo de descarga, pues su p-valor es menor a $\alpha = 0.05$. En concreto, un aumento de la longitud o de la resolución provocan un aumento en el tiempo de descarga, como era esperable, ya que los parámetros asociados a estas variables son positivos.
+
+En segundo lugar, hay que decir que hemos tomado como referencia el navegador 1, Chrome. El modelo nos indica que el uso navegador 2, Firefox, no es significativo con respecto Chrome. En cambio, el uso del navegador 3, Opera, sí es significativo con respecto a los otros dos. De hecho, usando Opera se reduce considerablemente el tiempo de descarga de los vídeos, pues su parámetro es negativo.
+
+Por último, la variable cualitativa $alumno$ no es significativa, esto es, no influye quién haya hecho la medición en el tiempo de descarga.
+
+
+## Apartado 5
+
+Veamos si hay alguna manera de mejorar el modelo, por ejemplo, eliminando algún regresor poco significativo. Usaremos el método Stepwise, que va evaluando el modelo y eliminando uno a uno los regresores no significativos.
+
+```{r}
+m3 = step(m2)
+```
+
+Como vemos, se ha eliminado el regresor correspondiente a la variable $alumno$.
+
+```{r}
+summary(m3)
+```
+
+Sin embargo, la desviación típica residual y $R^2$ no han mejorado.
+
+
+## Apartado 6
+
+Como hemos comentado anteriormente, el navegador Opera es el navegador significativamente distinto a los demás, pues el p-valor asociado es menor que $alpha = 0.05$. Usando este navegador puede dismunuirse considerablemente el tiempo de descarga, con respecto al resto de navegadores.
+
+
+## Apartado 7
+
+Calculemos un intervalo de predicción para el tiempo de descarga de un vídeo visualizado con el Chrome con una resolución de 360 y una longitud de 5 minutos ($\alpha = 0.05$).
+
+```{r}
+obs_nueva = data.frame(longitud=5,
+        resolucion=360,
+        navegador=factor(2))
+predict(m3,obs_nueva,interval='prediction')
+```
+
+El intervalo de confianza para esta predicción es (115.9306, 157.5721), siendo su valor central 136.7514.
+
+
+## Apartado 8
+
+Identifiquemos el residuo cuyo valor absoluto sea mayor.
+
+```{r}
+residuos = residuals(m3)
+maximo = max(abs(residuos))
+residuos[residuos==maximo]
+```
+
+Vemos que la observación 27 es la que mayor residuo tiene. Podríamos plantearnos eliminar esta observación, considerándola atípica, para mejorar el modelo.
+
+
+## Apartado 9
+
+Realicemos un histograma de los residuos del modelo.
+
+```{r}
+hist(residuos,col="skyblue")
+```
+
+Observamos que la distribución de los residuos se asemeja a una normal (se asemejaría más si hubiese un mayor número de observaciones). Esto quiere decir que la mayoría de observaciones generan poco residuo, mientras que algunas pocas generan un gran residuo. Esto es una señal de que el modelo está bien ajustado.
+
+
+## Apartado 10
+
+Como hemos visto,  la observación 27 es la que mayor residuo tiene. De hecho, podemos comprobar si hay observaciones con gran residuo que están perjudicando el modelo empleando la siguiente función de R:
+
+```{r}
+plot(m3)
+```
+
+En el primer gráfico, vemos que las observaciones 27, 22 y 58 son las que mayor residuo generan, es decir, están más alejados a la línea roja central. Podría considerarse eliminarlas para mejorar el modelo:
+
+```{r}
+m4 = lm(tiempo ~ longitud + resolucion + navegador + alumno, data = dat[c(-27,-22,-58),])
+summary(m4)
+```
+
+En efecto, la desviación típica residual ha disminuido y $R^2$ ha aumentado, por lo que este modelo es mejor.

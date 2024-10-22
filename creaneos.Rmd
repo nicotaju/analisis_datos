@@ -1,0 +1,38 @@
+---
+title: "craneos"
+author: "Nicolás Tajuelo 21316"
+date: "2024-10-16"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Cráneos
+
+```{r}
+dat = read.table('craneos.txt',sep=',',header=T)
+dat$PERIODO = factor(dat$PERIODO)
+(m1 = ldaPlus(x = dat[2:5], grouping = dat$PERIODO))
+```
+
+```{r}
+plot(m1,dimen = 2,col=as.integer(dat$PERIODO))
+```
+
+```{r}
+m1$standCoefWithin
+```
+
+```{r}
+m1$class
+```
+
+## Contraste
+
+```{r}
+m1$sigTest
+```
+
+
