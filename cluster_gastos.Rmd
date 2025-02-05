@@ -1,0 +1,60 @@
+---
+title: "cluster_gastos"
+output: pdf_document
+date: "2024-11-05"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Análisis cluster de 'gastos'
+
+```{r}
+dat = read.csv('gastos.csv',header=T)
+dat$PROVINC[15] = 'CORUNHA'
+x = dat[,3:8]
+row.names(x) = dat$PROVINC
+y = scale(x)
+
+#cálculo de la matriz de distancias
+d = dist(y)
+#cluster
+fit = hclust(d,method= 'complete')
+plot(fit,h=-1)
+#selecciono cuántos grupos quiero
+rect.hclust(fit,k=3)
+#en qué grupo va cada provincia?
+(grupos = cutree(fit,k=3))
+#boxplot
+boxplot(x$ALIMENT ~ grupos, col = rainbow(3), horizontal = T)
+```
+
+## Librería 'factoextra'
+
+```{r}
+library(factoextra)
+#esta representación utiliza componentes principales para ahcer el gráfico
+fviz_cluster(list(data=x,cluster=grupos))
+```
+
+## Método de Ward
+
+```{r}
+#cluster
+fit2 = hclust(d,method= 'ward.D2')
+plot(fit2,h=-1)
+#selecciono cuántos grupos quiero
+rect.hclust(fit2,k=4)
+#en qué grupo va cada provincia?
+grupos2 = cutree(fit,k=4)
+#boxplot
+boxplot(x$ALIMENT ~ grupos2, col = rainbow(3), horizontal = T)
+#pca
+fviz_cluster(list(data=x,cluster=grupos2))
+```
+
+```{r}
+sapply(x[grupos==1,],mean)
+```
+

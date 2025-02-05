@@ -1,0 +1,294 @@
+---
+title: "Cuestionario 23/10"
+output: pdf_document
+date: "2024-10-28"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Cuestionario de prueba 23 Octubre
+
+## 1. Descriptiva: correlaciones
+
+\textit{Con los datos del archivo cuerpo.txt, indica para mujeres, la variable numérica que presenta más correlación con C\_abdomen.}
+
+```{r}
+cuerpo = read.table('cuerpo.txt',header=T)
+#selecciono mujeres y var. numericas
+matriz = cor(cuerpo[cuerpo$sexo==0,-25]) 
+#selecciono solo la fila de C_abdomen
+round(matriz,2)[13,] 
+```
+
+Para hallar el máximo:
+
+```{r}
+which.max(round(matriz,2)[13,-13])
+```
+
+
+## 2. Regresión: variable logaritmica
+
+\textit{En el archivo “fev.txt” se muestran datos de un estudio sobre la Capacidad Pulmonar (“fev” Forced Expiratory Volume en litros) en 654 jóvenes entre 3 y 19 años. En el archivo además de la variable fev se incluyen las variables: age (años del individuo), ht (estatura en pulgadas), sex (cualitativa, mujer=0, hombre=1) y smoke (cualitativa, No-fumador=0, fumador=1).}
+
+\textit{Estima el modelo de regresión múltiple utilizando log(fev) como variable dependiente y el resto de las variabes como regresores.}
+
+```{r}
+fev = read.table('fev.txt',header=T)
+fev$fev = log(fev$fev)
+#ya tenemos la variable dependiente, ahora hacemos la regresion
+lm1 = lm(fev ~ ., dat = fev)
+summary(lm1)
+```
+
+Interpretación de los resultados:
+
+\begin{itemize}
+  \item Podemos ver el coeficiente para cada variable independiente y su p-valor: si es menor a nuestra $alpha$ dicha variable será significativa.
+  \item Residual standard error: es el error medio que se comete al predecir la variable dependiente con esta ecuación de regresión.
+  \item Degrees of freedom: nº de observaciones - nº variables independientes.
+  \item R-Squared: porcentaje de la varianza de la variable dependiente que está explicada por el modelo.
+\end{itemize}
+
+
+## 3. PCA
+
+\textit{Con los datos correspondientes a mujeres del archivo cuerpo.txt, realiza un análisis de componentes principales de las variables estandarizadas (12 medidas de contorno, van de la 10 a la 21).}
+
+```{r}
+cuerpo = read.table('cuerpo.txt',header=T)
+muj = cuerpo[cuerpo$sexo==0,10:21]
+fit1 = princomp(muj,cor=T)
+#porcentaje de variabilidad explicada
+fit1$sdev^2/12*100
+```
+
+```{r}
+#correlación de CP2 con C_muslo
+fit1$loadings['C_muslo','Comp.2']
+```
+
+```{r}
+# ¿La solución de 3 componentes deja sin explicar 
+# el 12.26 % de la variable C_muslo?
+source('prinfact.R')
+fit2 = prinfact(muj,3) #ojo, pedimos 3 CP
+fit2$loadings
+```
+
+```{r}
+#¿La puntuación (score) más alta en valor absoluto obtenida en el primer componente es 12.815?
+max(fit2$scores[,1])
+```
+
+
+## 4. PCA
+
+\textit{Con los datos del archivo cuerpo.txt, realiza un análisis de componentes principales (en correlaciones) de las variables 11, 12, 13, 14, 15, 16, 19, 20 utilizando los datos correspondientes a hombres. Indica el porcentaje de variablidad de la variable C\_muslo que está explicada por la solución de 3 componentes.}
+
+```{r}
+hom = cuerpo[cuerpo$sexo==1,c(11,12,13,14,15,16,19,20)]
+fit3 = prinfact(hom,3)
+fit3$loadings
+```
+
+
+## 5. LDA
+
+\textit{El conjunto de datos iris (archivo: “lirios.txt”) contiene la información de 150 lirios, de los cuales: 50 son setosa, 50 son versicolor y 50 son virginica. Disponemos de cuatro medidas en cada observación: el largo y ancho del sépalo y pétalo, en centímetros. Realiza el análisis discriminante utilizando species como variable respuesta en función de las cuatro variables anteriormente indicadas, sin estandarizar.}
+
+```{r}
+library(MASS)
+lirios = read.table('lirios.txt',header=T)
+lirios$Species = factor(lirios$Species)
+lda1 = lda(Species~., data = lirios)
+lda1
+```
+
+```{r}
+#El centroide de la especie Setosa, 
+#en la variable Sepal.Length se sitúa en 6.006
+lda1$means
+#vemos que la media de Sepal.Length para la clase setosa es 5.006
+```
+
+```{r}
+#El coeficiente de la función discriminante 1, 
+#para la variable Sepal.Width, vale 1.53
+lda1$scaling
+#vemos que el coeficiente es 1.5344731
+```
+
+```{r}
+#podemos predecir el mismo dataset usando Leave-One-Out CV
+p1 = predict(lda1)
+```
+
+```{r}
+#Gráfico
+plot(lda1, col=as.integer(lirios$Species))
+```
+
+
+```{r}
+#De las 150 observaciones, hay tres de ellas 
+#que se han clasificado incorrectamente
+library(multiUS)
+lda2 = ldaPlus(lirios[,1:4],grouping=lirios$Species)
+lda2$class
+```
+
+
+## 6. Regresión simple
+
+\textit{Con los datos del archivo cuerpo.txt estima el modelo de regresión simple entre el Peso (variable dependiente) y A\_codo como regresor. Un individuo pesa 55.5 kg y la medida de su A\_codo es 11.2 cm. Calcula el error de predicción (residuo) del modelo para esta persona.}
+
+```{r}
+rsim = lm(peso ~ A_codo, data = cuerpo)
+nueva = data.frame(A_codo=11.2)
+55.5-predict(rsim,nueva)
+```
+
+
+## 7. Regresión múltiple 
+
+```{r}
+rmult = lm(peso ~ A_muneca + C_pecho + C_gemelo + 
+             C_tobillo + C_muneca + sexo, data = cuerpo)
+summary(rmult)
+```
+
+\begin{itemize}
+  \item \textit{"Todos los regresores en el modelo tienen efecto significativo"} FALSO
+  \item \textit{A igualdad del resto de los regresores, hay diferencia significativa en el peso de hombres y mujeres igual a -0.446 kg} FALSO: no es significativa
+  \item \textit{La desviación típica de los residuos es 4.411 y sus unidades son cm} FALSO: las unidades son kg: los residuos son el error en la variable dependiente (peso).
+  \item \textit{A igualdad del resto de los regresores, el aumento de un kg en el peso de una persona, incrementa 1.121 cm, la variable A\_muneca} FALSO: el peso incremeta 1.121 kg por cada cm que incrementa A\_muneca
+\end{itemize}
+
+
+## 8. Regresión múltiple
+
+```{r}
+rmul2 = lm(peso ~ sexo + C_muslo, data = cuerpo)
+summary(rmul2)
+```
+
+
+## 9. LDA
+
+\textit{El archivo “cars.txt” tiene datos de 391 coches y contiene las siguientes variables:mpg, engine, horse, weight, accel, origin, cylinders. Todas las variables son continuas excepto origin que es cualitativa y representa el lugar de fabricación del vehículo. Tiene la siguiente codificación: 1 coches americanos (USA), 2 coches europeos (EUR) y 3 coches japoneses (JAP). Hay 244 coches USA, 68 coches UER y 79 coches JAP. Realiza el análisis discriminante entre los tres tipos de coches según su origen (variable origin) utilizando como variables explicativas las siguientes mpg ( 1 ), engine ( 2 ), weight ( 4 ), accel ( 5 ), cylinders ( 7 )}
+
+```{r}
+cars = read.table('cars.txt',header=T)
+(ldacars = ldaPlus(cars[,c(1,2,4,5,7)],grouping=cars$origin))
+```
+
+```{r}
+#Las dos variables con más peso (positivo o negativo) en la
+#primera función discriminante estandarizada es engine, weight
+
+#OJO: coeficientes estandarizados
+ldacars$standCoefWithin
+```
+
+```{r}
+nueva = data.frame(mpg=33,engine=91,weight=1795,
+                   accel=17.4,cylinders=4)
+predict(ldacars,nueva)
+#lo clasifica como JAP (clase 3)
+```
+
+```{r}
+#La segunda coordenada del centroide para los 
+#coche europeos es 0.0210113 en valor absoluto.
+ldacars$centroids
+#vemos que es -0.38620689
+```
+
+```{r}
+#El número de funciones discriminantes 
+#significativas con nivel de significación alpha=0.05 es 1.
+ldacars$sigTest
+#si, solo hay una función LD significativa
+```
+
+```{r}
+#matriz de confusion
+ldacars$class
+plot(ldacars,col=as.integer(cars$origin))
+```
+
+
+## 10. LDA 'cuerpo.txt'
+
+```{r}
+ldacuerpo = ldaPlus(cuerpo[,10:17],grouping=cuerpo$sexo)
+ldacuerpo$standCoefWithin
+```
+
+
+## 11 LDA 'penguins.txt'
+
+```{r}
+penguins = read.table('penguins.txt',header=T)
+(ldapen = ldaPlus(penguins[,3:6],grouping=penguins$species))
+```
+
+```{r}
+#El análisis muestra que son importantes 
+#(significativas con alfa = 0.05) 
+#las tres funciones discriminates
+ldapen$sigTest
+#FALSO: las dos son significativas pero es que solo hay 2
+```
+
+```{r}
+#Los coeficientes de la funciones discriminates 
+#estandarizadas son todos menores que uno en valor absoluto
+ldapen$standCoefWithin
+#FALSO
+```
+
+```{r}
+plot(ldapen,col=as.integer(penguins$species))
+```
+
+```{r}
+#Hay más del 23% de observaciones de la especie 
+#Gentoo mal clasificadas
+ldapen$class
+```
+
+
+## 12. Descriptiva ("salary.txt")
+
+```{r}
+salary = read.table('salary.txt',header=T)
+#¿Qué degree tiene más varianza?
+varianzas = tapply(salary$salary,salary$degree,var)
+which.max(varianzas)
+```
+
+```{r}
+#¿Todos los individuos con rango (rank) Assist 
+#tienen salario inferior a los individuos de rango Prof?
+tapply(salary$salary,salary$rank,max)
+#el máximo de Assist es 23713
+tapply(salary$salary,salary$rank,min)
+#el mínimo de Prof es 24450
+```
+
+```{r}
+#¿La variable salario (salary) tiene correlación 
+#positiva igual a 0.70 con la antigüedad (year)?
+cor(salary[,c('salary','ysdeg','year')])
+```
+
+```{r}
+#¿Quién cobra más?
+salary[which.max(salary$salary),]
+```
+
+

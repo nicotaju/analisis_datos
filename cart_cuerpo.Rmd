@@ -1,0 +1,95 @@
+---
+title: "cart"
+output: pdf_document
+date: "2024-11-12"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Regression Tree
+
+```{r}
+dat = read.table('cuerpo.txt',header=T)
+hombres = dat[dat$sexo==1,]
+names(hombres)
+```
+
+```{r}
+library(rpart)
+library(rpart.plot)
+t1 = rpart(peso ~C_cintura + C_pecho, data = hombres)
+rpart.plot(t1)
+#ojo, numeros redondeados
+```
+
+```{r}
+#numero de observaciones en cada nodo terminal
+table(t1$where)
+```
+
+```{r}
+#predice las observaciones del dataset 
+#(ojo, los números del plot están redondeados, por eso aquí salen con decimales)
+predict(t1)
+```
+
+```{r}
+#la media de cada grupo es el valor que se asigna
+tapply(hombres$peso,t1$where,mean)
+```
+
+## Criterio de parada
+
+Resumen del árbol:
+
+```{r}
+printcp(t1)
+```
+
+CP es el parámetro de complejidad: el error relativo que se consigue reducir en cada partición. Vamos a hacer el árbol manualmente.
+
+```{r}
+#VARIABILIDAD TOTAL
+y = hombres$peso
+(VT = sum((y-mean(y))^2))
+#primera división
+g1 = hombres$C_cintura < 82
+g2 = hombres$C_cintura > 82
+y1 = mean(y[g1])
+y2 = mean(y[g2])
+#Residual Sum Square
+(RSS = sum((y[g1]-y1)^2) + sum((y[g2]-y2)^2))
+#error relativo en la primera partición
+(er = 1 - RSS/VT)
+#con cada partición que hagamos, disminuye el error relativo
+```
+
+Por tanto, el criterio de parada será una cota de error relativo, o lo que es lo mismo, el CP en la última partición. Para indicarlo:
+
+```{r}
+t2 = rpart(peso ~C_cintura + C_pecho,data= hombres, cp=0.001)
+rpart.plot(t2)
+printcp(t2)
+#gráfico del parámetro de complejidad
+plotcp(t2)
+```
+
+Podar el árbol
+
+```{r}
+t3 = prune(t2,cp=0.013)
+rpart.plot(t3)
+printcp(t3)
+Rsquared3 = 1- 0.25829
+RSS3 = 0.25829*27188
+sr3 = sqrt(RSS3/247)
+```
+
+## Importancia de cada variable
+
+```{r}
+barplot(t3$variable.importance)
+```
+

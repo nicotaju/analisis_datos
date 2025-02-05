@@ -1,0 +1,239 @@
+---
+title: "Ejercicio de coches: Estadística Desciptiva"
+author: "Nicolás Tajuelo 21316"
+date: "18/9/2024"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Ejercicio de Cars
+
+### Pregunta 1
+
+Leemos el archivo de datos "cars.txt".
+
+```{r}
+dat = read.table("cars.txt",header=TRUE)
+head(dat)
+```
+
+Es un conjunto de datos con 7 variables.
+
+### Pregunta 2
+
+Analizamos el origen de los coches.
+
+```{r}
+dat$origin = factor(dat$origin,labels=c("USA","EUR","JAP"))
+frec_abs = table(dat$origin)
+frec_rel = prop.table(frec_abs)
+barplot(frec_abs, col = rainbow(3))
+barplot(frec_rel, col = rainbow(3))
+```
+
+### Pregunta 3
+
+Media de las especificaciones según el origen.
+
+```{r}
+tapply(dat$mpg,dat$origin,mean)
+tapply(dat$engine,dat$origin,mean)
+tapply(dat$horse,dat$origin,mean)
+tapply(dat$weight,dat$origin,mean)
+tapply(dat$accel,dat$origin,mean)
+```
+
+### Pregunta 4
+
+Desviación típica de las especificaciones según el origen.
+
+```{r}
+tapply(dat$mpg,dat$origin,sd)
+tapply(dat$engine,dat$origin,sd)
+tapply(dat$horse,dat$origin,sd)
+tapply(dat$weight,dat$origin,sd)
+tapply(dat$accel,dat$origin,sd)
+```
+
+### Pregunta 5
+
+Histograma del consumo de combustible de los coches, expresado en millas por galón de combustible.
+
+```{r}
+hist(dat$mpg,col="red")
+```
+
+### Pregunta 6
+
+Histograma del consumo, expresado en litros de combustible por 100km.
+
+```{r}
+dat$consumo = 235.2 / dat$mpg
+hist(dat$consumo,col="green")
+```
+
+### Pregunta 7
+
+Boxplot de las especificaicones.
+
+```{r}
+par(mfrow=c(2,2))
+boxplot(dat$mpg ~ dat$origin, col = rainbow(3),horizontal=TRUE)
+boxplot(dat$consumo ~ dat$origin, col = rainbow(3),horizontal=TRUE)
+boxplot(dat$weight ~ dat$origin, col = rainbow(3),horizontal=TRUE)
+boxplot(dat$horse ~ dat$origin, col = rainbow(3),horizontal=TRUE)
+```
+
+### Pregunta 12
+
+Histograma de las especificaciones.
+
+```{r}
+par(mfrow=c(2,2))
+hist(dat$engine,col="red")
+hist(dat$horse,col="green")
+hist(dat$weight,col="yellow")
+hist(dat$accel,col="blue")
+```
+
+### Pregunta 13
+
+Analizamos la asimetría de las especificaciones.
+
+```{r}
+asim <- function(x){mean((x-mean(x))^3/sd(x)^3)}
+asim(dat$mpg)
+asim(dat$engine)
+asim(dat$horse)
+asim(dat$weight)
+asim(dat$accel)
+tapply(dat$mpg,dat$origin,asim)
+```
+
+### Pregunta 14
+
+Obtenemos el coeficiente de apuntamiento de las especificaciones.
+
+```{r}
+curt <- function(x){mean((x-mean(x))^4/sd(x)^4)}
+curt(dat$mpg)
+curt(dat$engine)
+curt(dat$horse)
+curt(dat$weight)
+curt(dat$accel)
+tapply(dat$mpg,dat$origin,curt)
+```
+
+### Pregunta 15
+
+Analizamos la relación entre las variables peso y potencia.
+
+```{r}
+plot(dat$weight,dat$horse)
+scatter.smooth(dat$weight,dat$horse)
+cor(dat$weight,dat$horse)
+```
+
+### Pregunta 16
+
+Ahora con ambas variables en escala logarítmica.
+
+```{r}
+plot(log(dat$weight),log(dat$horse))
+scatter.smooth(log(dat$weight),log(dat$horse))
+cor(log(dat$weight),log(dat$horse))
+```
+
+
+### Pregunta 17
+
+Analizamos la relación de las variable peso y consumo.
+
+```{r}
+plot(dat$weight,dat$mpg)
+scatter.smooth(dat$weight,dat$mpg)
+cor(dat$weight,dat$mpg)
+```
+
+### Pregunta 18
+
+Ahora, con el consumo expresado en litros de combustible por 100km.
+
+```{r}
+plot(dat$weight,dat$consumo)
+scatter.smooth(dat$weight,dat$consumo)
+cor(dat$weight,dat$consumo)
+```
+
+### Pregunta 19
+
+Obtenemos la matriz de varianzas de los datos.
+
+```{r}
+var(dat[,c(1,2,3,4,5)])
+```
+
+
+### Pregunta 20
+
+Obtenemos los gráficos de dispersión por pares.
+
+```{r}
+pairs(dat[,1:5])
+```
+
+### Pregunta 21
+
+Obtenemos la matriz de correlaciones.
+
+```{r}
+cor(dat[,1:5])
+```
+
+### Pregunta BONUS
+
+Analizamos la relación entre la potencia y la aceleración. Vemos que cuanta más potencia, menos segundos tarda el coche en alcanzar las 60 millas por hora (acelera más).
+
+```{r}
+plot(dat$horse,dat$accel)
+scatter.smooth(dat$horse,dat$accel)
+```
+
+### Pregunta 22
+
+```{r}
+#install.packages("psych")
+library(psych)
+```
+
+Obtenemos los gráficos de dispersión por pares usando esta nueva librería.
+
+```{r}
+pairs.panels(dat[,1:5])
+```
+
+### Pregunta 23
+
+```{r}
+var(dat[,c(8,2,3,4,5)])
+pairs(dat[,c(8,2,3,4,5)])
+cor(dat[,c(8,2,3,4,5)])
+pairs.panels(dat[,c(8,2,3,4,5)])
+        
+```
+
+### Pregunta 24
+
+```{r}
+#install.packages("corrplot")
+library(corrplot)
+```
+
+```{r}
+corr = cor(dat[,c(8,2,3,4,5)])
+corrplot(corr)
+```
+
